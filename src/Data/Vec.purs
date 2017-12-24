@@ -8,6 +8,8 @@ module Data.Vec
   , vec2
   , vec3
   , fill
+  , range'
+  , range
   , replicate
   , replicate'
   , fromArray
@@ -15,6 +17,7 @@ module Data.Vec
   , lengthT
   , toArray
   , toUnfoldable
+  , unsafeIndex
   , index, (!!)
   , concat
   , updateAt
@@ -50,9 +53,9 @@ import Data.Maybe (Maybe(..), fromJust)
 import Data.Traversable (traverse, sequence, class Traversable)
 import Data.Tuple (Tuple(Tuple))
 import Data.Typelevel.Num (class Min, class Sub, class LtEq, class Pred, class Lt)
-import Data.Typelevel.Num.Ops (class Trich, class Add, class Succ)
-import Data.Typelevel.Num.Reps (D3, D2, D1, D0, d0)
-import Data.Typelevel.Num.Sets (toInt, class Pos, class Nat)
+import Data.Typelevel.Num.Ops (class Add, class Succ)
+import Data.Typelevel.Num.Reps (D0, D1, D2, D3)
+import Data.Typelevel.Num.Sets (class Nat, class Pos, toInt)
 import Data.Typelevel.Undefined (undefined)
 import Data.Unfoldable (class Unfoldable)
 import Partial.Unsafe (unsafePartial)
@@ -82,15 +85,22 @@ uncons (Vec v) = case unsafePartial $ fromJust $ Array.uncons v of
 singleton :: forall a. a -> Vec D1 a
 singleton x = x +> empty
 
+-- | shortcut for creating a 2d-`Vec`
 vec2 :: forall a. a -> a -> Vec D2 a
 vec2 x y = x +> y +> empty
 
+-- | shortcut for creating a 3d-`Vec`
 vec3 :: forall a. a -> a -> a -> Vec D3 a
 vec3 x y z = x +> y +> z +> empty
 
-
+-- | fill vec using a function which is given indices
 fill :: forall a s. Nat s => (Int -> a) -> Vec s a
-fill f = Vec $ map f (0 `Array.range`  (toInt (undefined :: s) - 1))
+fill f = Vec $ map f range
+  where
+    s = toInt (undefined :: s)
+    range = case s of
+      0 -> []
+      otherwise -> (0 `Array.range`  (s - 1))
 
 -- | Construct a vector of a given length containing the same element repeated.
 replicate :: forall s a. Nat s => s -> a -> Vec s a
@@ -98,6 +108,12 @@ replicate = const replicate'
 
 replicate' :: forall s a. Nat s => a -> Vec s a
 replicate' a = Vec $ Array.replicate (toInt (undefined :: s)) a
+
+range' ∷ ∀s. Nat s => Int → Vec s Int
+range' i = fill (_ + i)
+
+range ∷ ∀s. Nat s => Int → s -> Vec s Int
+range i _ = range' i
 
 -- | Convert an array to a vector.
 fromArray :: forall s a. Nat s => Array a -> Maybe (Vec s a)
@@ -120,6 +136,9 @@ toArray (Vec xs) = xs
 -- | Convert a vector into any `Unfoldable`.
 toUnfoldable :: forall f s a. Unfoldable f => Nat s => Vec s a -> f a
 toUnfoldable (Vec v) = Array.toUnfoldable v
+
+unsafeIndex ∷ ∀s a. Vec s a -> Int -> a
+unsafeIndex (Vec xs) i = unsafePartial $ Array.unsafeIndex xs i
 
 -- | Get the element at a given index inside a vector. Index out of bounds errors
 -- | are caught at compile time.
