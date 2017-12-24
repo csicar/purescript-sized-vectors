@@ -3,9 +3,13 @@ module Test.Main where
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE)
+import Data.Matrix (concatV, deleteRow, matrix2d, transpose)
+import Data.Matrix as Matrix
 import Data.Maybe (fromJust)
+import Data.Semiring ((*))
 import Data.Traversable (sequence)
 import Data.Typelevel.Num (D1, D2, D3, D4, D9, d2, d3, d6, toInt)
+import Data.Typelevel.Num.Reps (d1, d4)
 import Data.Vec (Vec, concat, drop, drop', empty, length, lengthT, replicate, replicate', fromArray, slice, slice', tail, take, take', (+>))
 import Partial.Unsafe (unsafePartial)
 import Prelude (($), Unit, pure, discard)
@@ -16,6 +20,13 @@ import Test.Unit.Main (runTest)
 
 main :: forall e. Eff (console :: CONSOLE, testOutput :: TESTOUTPUT, avar :: AVAR | e) Unit
 main = runTest do
+  suite "matrix" do
+    let m1 = matrix2d 1 2 3 4
+        m2 = m1 `concatV` (matrix2d 5 6 7 8)
+    test "mul" do
+      equal (matrix2d 7 10 15 22) $ m1 * m1
+    test "transpose" do
+      equal (matrix2d 1 3 2 4) $ transpose m1
   suite "vec" do
     let vec1 = replicate d2 1
         vec2 = replicate d3 2
